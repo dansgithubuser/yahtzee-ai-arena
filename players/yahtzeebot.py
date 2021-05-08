@@ -7,7 +7,7 @@ class State:
 def play(stage, dice, opponent, new_game):
     if new_game: State.categories = set()
     if stage != 3:
-        save_value = max(dice.count(i) for i in range(6))
+        save_value = max(range(1, 7), key=lambda i: dice.count(i))
         for die in dice:
             if die.value == save_value:
                 die.save()
