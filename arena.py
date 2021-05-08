@@ -66,8 +66,13 @@ class Player:
                 raise Exception(f'''Player {self.name} tried to score in invalid category {decisions['category']}!''')
             if self.categories.get(decisions['category']):
                 raise Exception(f'''Player {self.name} tried to score in already-chosen category {decisions['category']}!''')
+            yahtzee_bonus = (self.dice.score_yahtzee()
+                and self.categories.get('yahtzee')
+                and self.categories.get('yahtzee').score_yahtzee())
             self.categories[decisions['category']] = copy.deepcopy(self.dice)
-            return decisions['category']
+            if yahtzee_bonus: self.yahtzee_bonus += 100
+            self.draw_bar(decisions['category'], yahtzee_bonus)
+            return True
         else:
             for die in self.dice: die.unsave()
             try:
@@ -83,13 +88,7 @@ class Player:
         opponent_state = opponent.get_state()
         self.dice = game.Dice()
         for stage in range(1, 4):
-            category = self.play(stage, opponent_state)
-            if category: break
-        yahtzee_bonus = (self.dice.score_yahtzee()
-            and self.categories['yahtzee']
-            and self.categories['yahtzee'].score_yahtzee())
-        if yahtzee_bonus: self.yahtzee_bonus += 100
-        self.draw_bar(category, yahtzee_bonus)
+            if self.play(stage, opponent_state): break
 
     def get_state(self):
         return {
