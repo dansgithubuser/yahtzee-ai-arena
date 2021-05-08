@@ -72,21 +72,17 @@ def invoke(
 
 #===== main =====#
 p1 = invoke(
-    'flask run --port 8000',
-    env={'BRAIN': args.player_1_brain, 'FLASK_APP': 'player.py'},
+    'python3 player.py',
+    env={'BRAIN': args.player_1_brain, 'PORT': '8000'},
     popen=True,
-    stdout=subprocess.PIPE,
-    stderr=subprocess.PIPE,
 )
-time.sleep(2)
+time.sleep(0.5)
 p2 = invoke(
-    'flask run --port 8001',
-    env={'BRAIN': args.player_2_brain, 'FLASK_APP': 'player.py'},
+    'python3 player.py',
+    env={'BRAIN': args.player_2_brain, 'PORT': '8001'},
     popen=True,
-    stdout=subprocess.PIPE,
-    stderr=subprocess.PIPE,
 )
-time.sleep(2)
+time.sleep(0.5)
 try:
     invoke('python3 arena.py')
 finally:

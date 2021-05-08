@@ -1,11 +1,13 @@
 import game
+from receiver import Receiver
 
 from danssfmlpy import media
-import requests
 
 import argparse
 import copy
+import json
 import random
+import socket
 import time
 
 parser = argparse.ArgumentParser()
@@ -21,22 +23,25 @@ game_number = 0
 class Player:
     def __init__(self, number, port):
         self.number = number
-        self.port = port
-        attributes = requests.get(self.url('/attributes')).json()
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.settimeout(0.05)
+        self.sock.connect(('localhost', port))
+        self.receiver = Receiver(self.sock)
+        self.name = f'({port})'
+        attributes = self.req('attributes')
         self.name = attributes['name']
         color = attributes['color']
         self.color = (color['r'], color['g'], color['b'])
         self.points = 0
 
-    def url(self, path):
-        return f'http://localhost:{self.port}{path}'
-
-    def post(self, path, json={}):
+    def req(self, op, body=None):
+        self.sock.sendall(json.dumps({'op': op, 'body': body}).encode('utf-8') + b'\0')
         try:
-            return requests.post(self.url(path), json=json, timeout=0.02).json()
+            res = json.loads(self.receiver.recv().decode('utf-8'))
         except:
             print(f'Bad response from player {self.name}!')
             raise
+        return res
 
     def start_new_game(self):
         self.decisions = None
@@ -45,7 +50,7 @@ class Player:
         self.new_game = True
 
     def play(self, stage, opponent):
-        decisions = self.post('/play', json={
+        decisions = self.req('play', {
             'stage': stage,
             'dice': self.dice.roll(),
             'opponent': opponent,
