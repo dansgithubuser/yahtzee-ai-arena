@@ -6,6 +6,7 @@ from danssfmlpy import media
 import argparse
 import copy
 import json
+import math
 import random
 import socket
 import time
@@ -14,6 +15,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--port-player-1', '-p1', type=int, default=8000)
 parser.add_argument('--port-player-2', '-p2', type=int, default=8001)
 args = parser.parse_args()
+
+GAMES = 100
 
 media.init(640, 480, 'Yahtzee AI Arena')
 media.clear(color=(0, 0, 0))
@@ -32,6 +35,8 @@ class Player:
         self.name = attributes['name']
         color = attributes['color']
         self.color = (color['r'], color['g'], color['b'])
+        self.vertex_buffer = media.VertexBuffer(GAMES * len(game.categories) * 6)
+        self.vertex_buffer.set_type('triangles')
         self.points = 0
 
     def req(self, op, body=None):
@@ -45,23 +50,21 @@ class Player:
 
     def start_new_game(self):
         self.decisions = None
-        self.categories = { i: None for i in game.categories }
+        self.categories = {}
         self.yahtzee_bonus = 0
-        self.new_game = True
 
     def play(self, stage, opponent):
         decisions = self.req('play', {
             'stage': stage,
             'dice': self.dice.roll(),
             'opponent': opponent,
-            'new_game': self.new_game,
+            'new_game': len(self.categories) == 0,
         })
         self.decisions.append(decisions)
-        self.new_game = False
         if 'category' in decisions:
-            if decisions['category'] not in self.categories:
+            if decisions['category'] not in game.categories:
                 raise Exception(f'''Player {self.name} tried to score in invalid category {decisions['category']}!''')
-            if self.categories[decisions['category']] != None:
+            if self.categories.get(decisions['category']):
                 raise Exception(f'''Player {self.name} tried to score in already-chosen category {decisions['category']}!''')
             self.categories[decisions['category']] = copy.deepcopy(self.dice)
             return decisions['category']
@@ -90,7 +93,7 @@ class Player:
 
     def get_state(self):
         return {
-            'categories': {category: dice.values() for category, dice in self.categories.items() if dice},
+            'categories': {category: dice.values() for category, dice in self.categories.items()},
             'yahtzee_bonus': self.yahtzee_bonus,
             'decisions': self.decisions,
         }
@@ -103,18 +106,20 @@ class Player:
 
     def draw_bar(self, category, yahtzee_bonus):
         score = self.categories[category].score(category)
-        w_game = media.width() // 10
-        h_game = media.height() // 10
-        x_game = w_game * (game_number // 10)
-        y_game = h_game * (game_number % 10)
-        h_category = h_game // 13
+        isqrt_games = int(math.sqrt(GAMES))
+        w_game = media.width() // isqrt_games
+        h_game = media.height() // isqrt_games
+        x_game = w_game * (game_number // isqrt_games)
+        y_game = h_game * (game_number % isqrt_games)
+        h_category = h_game // len(game.categories)
         w_category = w_game * score // (2 * game.category_max_score[category])
         y_category = game.categories.index(category) * h_category + y_game
         if yahtzee_bonus: h_category = h_category * 3 // 2
         if self.number == 1:
             x_game += w_game
             w_category *= -1
-        media.fill(x=x_game, y=y_category, w=w_category, h=h_category, color=self.color)
+        self.vertex_buffer.fill(x=x_game, y=y_category, w=w_category, h=h_category, color=self.color)
+        self.vertex_buffer.draw()
         media.display()
 
 def play_game(players):
@@ -136,7 +141,7 @@ def poll_events():
 
 players = [Player(0, args.port_player_1), Player(1, args.port_player_2)]
 
-while game_number < 100:
+while game_number < GAMES:
     poll_events()
     play_game(players)
     if players[0].get_score() > players[1].get_score():
@@ -168,3 +173,6 @@ else:
 while True:
     if poll_events(): break
     time.sleep(0.01)
+    for player in players:
+        player.vertex_buffer.draw()
+    media.display()
