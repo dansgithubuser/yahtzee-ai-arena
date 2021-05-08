@@ -31,6 +31,9 @@ class Dice:
             for die in self.dice
         ])
 
+    def __repr__(self):
+        return self.__str__()
+
     def __getitem__(self, i):
         return self.dice[i]
 
@@ -43,6 +46,10 @@ class Dice:
                 die.roll()
         return self.values()
 
+    def save_where(self, condition):
+        for die in self.dice:
+            die.saved = condition(die.value)
+
     def saved(self):
         return [i for i, die in enumerate(self.dice) if die.saved]
 
@@ -51,6 +58,18 @@ class Dice:
 
     def count(self, value):
         return self.dice.count(value)
+
+    def index(self, value):
+        return self.dice.index(value)
+
+    def straight(self):
+        runs = [[]]
+        for i in range(1, 7):
+            if self.count(i):
+                runs[-1].append(self.index(i))
+            else:
+                runs.append([])
+        return max(runs, key=lambda run: len(run))
 
     def score(self, category):
         return getattr(self, f'score_{category}')()
@@ -101,25 +120,11 @@ class Dice:
         return 25
 
     def score_small_straight(self):
-        if self.score_yahtzee(): return 30
-        run = 0
-        for i in range(1, 7):
-            if self.count(i):
-                run += 1
-                if run >= 4: return 30
-            else:
-                run = 0
+        if self.score_yahtzee() or len(self.straight()) >= 4: return 30
         return 0
 
     def score_large_straight(self):
-        if self.score_yahtzee(): return 40
-        run = 0
-        for i in range(1, 7):
-            if self.count(i):
-                run += 1
-                if run >= 5: return 40
-            else:
-                run = 0
+        if self.score_yahtzee() or len(self.straight()) == 5: return 30
         return 0
 
     def score_yahtzee(self):
