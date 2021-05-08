@@ -11,7 +11,7 @@ def play(stage, dice, opponent, new_game):
         best_score = -1
         for i in range(32):
             for j, die in enumerate(dice):
-                die.saved = i | (1 << j)
+                die.saved = i & (1 << j)
             dice.roll()
             score, _ = dice.score_best(avoid=State.categories)
             if score > best_score:
