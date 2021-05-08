@@ -18,7 +18,7 @@ args = parser.parse_args()
 
 GAMES = 100
 
-media.init(640, 480, 'Yahtzee AI Arena')
+media.init(960, 720, 'Yahtzee AI Arena')
 media.clear(color=(0, 0, 0))
 
 game_number = 0
@@ -112,13 +112,20 @@ class Player:
         x_game = w_game * (game_number // isqrt_games)
         y_game = h_game * (game_number % isqrt_games)
         h_category = h_game // len(game.categories)
-        w_category = w_game * score // (2 * game.category_max_score[category])
+        w_category = w_game * score // (2 * max(game.category_max_score.values()))
         y_category = game.categories.index(category) * h_category + y_game
-        if yahtzee_bonus: h_category = h_category * 3 // 2
         if self.number == 1:
             x_game += w_game
             w_category *= -1
-        self.vertex_buffer.fill(x=x_game, y=y_category, w=w_category, h=h_category, color=self.color)
+        if yahtzee_bonus:
+            self.vertex_buffer.point(x_game           , y_category           , color=(0, 0, 0))
+            self.vertex_buffer.point(x_game+w_category, y_category           , color=self.color)
+            self.vertex_buffer.point(x_game+w_category, y_category+h_category, color=self.color)
+            self.vertex_buffer.point(x_game           , y_category           , color=(0, 0, 0))
+            self.vertex_buffer.point(x_game           , y_category+h_category, color=(255, 255, 255))
+            self.vertex_buffer.point(x_game+w_category, y_category+h_category, color=self.color)
+        else:
+            self.vertex_buffer.fill(x=x_game, y=y_category, w=w_category, h=h_category, color=self.color)
         self.vertex_buffer.draw()
         media.display()
 
