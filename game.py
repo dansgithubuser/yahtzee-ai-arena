@@ -25,6 +25,12 @@ class Dice:
         else:
             self.dice = [Die() for i in range(5)]
 
+    def __str__(self):
+        return ''.join([
+            f'{{{die.value}}}' if die.saved else f'[{die.value}]'
+            for die in self.dice
+        ])
+
     def __getitem__(self, i):
         return self.dice[i]
 
