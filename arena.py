@@ -23,9 +23,46 @@ media.clear(color=(0, 0, 0))
 
 game_number = 0
 
+isqrt_games = int(math.sqrt(GAMES))
+w_game = media.width() // isqrt_games
+h_game = media.height() // isqrt_games
+h_category = h_game // (len(game.categories) + 2)
+
+class Bar:
+    def __init__(self, player, category, yahtzee_bonus):
+        score = player.categories[category].score(category) + (100 if yahtzee_bonus else 0)
+        x_game = w_game * (game_number // isqrt_games)
+        y_game = h_game * (game_number % isqrt_games)
+        w_category = w_game * score // 300
+        i_category = game.categories.index(category)
+        y_category = i_category * h_category + y_game + (h_category // 2 if i_category > 6 else 0)
+        self.x = x_game + w_game // 2
+        self.y = y_category
+        self.w = w_category
+        self.h = h_category
+        self.color = player.color
+
+class GamePlot:
+    def __init__(self):
+        self.record = []
+        self.vertex_buffer = media.VertexBuffer(GAMES * 2 * len(game.categories) * 6)
+        self.vertex_buffer.set_type('triangles')
+
+    def add_result(self, player, category, yahtzee_bonus):
+        self.record.append((player, category, yahtzee_bonus))
+        if len(self.record) % 2 == 0:
+            bar1 = Bar(*self.record[-2])
+            bar2 = Bar(*self.record[-1])
+            bar1.w *= -1
+            self.vertex_buffer.fill(x=bar1.x, y=bar1.y, w=bar1.w, h=bar1.h, color=bar1.color)
+            self.vertex_buffer.fill(x=bar2.x, y=bar2.y, w=bar2.w, h=bar2.h, color=bar2.color)
+            self.vertex_buffer.draw()
+            media.display()
+
+game_plot = GamePlot()
+
 class Player:
-    def __init__(self, number, port):
-        self.number = number
+    def __init__(self, port):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.settimeout(0.05)
         self.sock.connect(('localhost', port))
@@ -35,8 +72,6 @@ class Player:
         self.name = attributes['name']
         color = attributes['color']
         self.color = (color['r'], color['g'], color['b'])
-        self.vertex_buffer = media.VertexBuffer(GAMES * len(game.categories) * 6)
-        self.vertex_buffer.set_type('triangles')
         self.points = 0
 
     def req(self, op, body=None):
@@ -71,7 +106,7 @@ class Player:
                 and self.categories.get('yahtzee').score_yahtzee())
             self.categories[decisions['category']] = copy.deepcopy(self.dice)
             if yahtzee_bonus: self.yahtzee_bonus += 100
-            self.draw_bar(decisions['category'], yahtzee_bonus)
+            game_plot.add_result(self, decisions['category'], yahtzee_bonus)
             return True
         else:
             for die in self.dice: die.unsave()
@@ -103,31 +138,6 @@ class Player:
             score += dice.score(category)
         return score
 
-    def draw_bar(self, category, yahtzee_bonus):
-        score = self.categories[category].score(category)
-        isqrt_games = int(math.sqrt(GAMES))
-        w_game = media.width() // isqrt_games
-        h_game = media.height() // isqrt_games
-        x_game = w_game * (game_number // isqrt_games)
-        y_game = h_game * (game_number % isqrt_games)
-        h_category = h_game // len(game.categories)
-        w_category = w_game * score // (2 * max(game.category_max_score.values()))
-        y_category = game.categories.index(category) * h_category + y_game
-        if self.number == 1:
-            x_game += w_game
-            w_category *= -1
-        if yahtzee_bonus:
-            self.vertex_buffer.point(x_game           , y_category           , color=(0, 0, 0))
-            self.vertex_buffer.point(x_game+w_category, y_category           , color=self.color)
-            self.vertex_buffer.point(x_game+w_category, y_category+h_category, color=self.color)
-            self.vertex_buffer.point(x_game           , y_category           , color=(0, 0, 0))
-            self.vertex_buffer.point(x_game           , y_category+h_category, color=(255, 255, 255))
-            self.vertex_buffer.point(x_game+w_category, y_category+h_category, color=self.color)
-        else:
-            self.vertex_buffer.fill(x=x_game, y=y_category, w=w_category, h=h_category, color=self.color)
-        self.vertex_buffer.draw()
-        media.display()
-
 def play_game(players):
     for player in players: player.start_new_game()
     first = random.randint(0, 1)
@@ -145,7 +155,7 @@ def poll_events():
             media.close()
             return True
 
-players = [Player(0, args.port_player_1), Player(1, args.port_player_2)]
+players = [Player(args.port_player_1), Player(args.port_player_2)]
 
 while game_number < GAMES:
     poll_events()
@@ -179,6 +189,5 @@ else:
 while True:
     if poll_events(): break
     time.sleep(0.01)
-    for player in players:
-        player.vertex_buffer.draw()
+    game_plot.vertex_buffer.draw()
     media.display()
