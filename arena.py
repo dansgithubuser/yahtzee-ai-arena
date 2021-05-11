@@ -1,7 +1,10 @@
 import game
 from receiver import Receiver
 
-from danssfmlpy import media
+try:
+    from danssfmlpy import media
+except:
+    media = None
 
 import argparse
 import copy
@@ -18,15 +21,15 @@ args = parser.parse_args()
 
 GAMES = 100
 
-media.init(960, 720, 'Yahtzee AI Arena')
-media.clear(color=(0, 0, 0))
+if media:
+    media.init(960, 720, 'Yahtzee AI Arena')
+    media.clear(color=(0, 0, 0))
+    isqrt_games = int(math.sqrt(GAMES))
+    w_game = media.width() // isqrt_games
+    h_game = media.height() // isqrt_games
+    h_category = h_game // (len(game.categories) + 2)
 
 game_number = 0
-
-isqrt_games = int(math.sqrt(GAMES))
-w_game = media.width() // isqrt_games
-h_game = media.height() // isqrt_games
-h_category = h_game // (len(game.categories) + 2)
 
 class Bar:
     def __init__(self, player, category, yahtzee_bonus):
@@ -42,24 +45,25 @@ class Bar:
         self.h = h_category
         self.color = player.color
 
-class GamePlot:
-    def __init__(self):
-        self.record = []
-        self.vertex_buffer = media.VertexBuffer(GAMES * 2 * len(game.categories) * 6)
-        self.vertex_buffer.set_type('triangles')
+if media:
+    class GamePlot:
+        def __init__(self):
+            self.record = []
+            self.vertex_buffer = media.VertexBuffer(GAMES * 2 * len(game.categories) * 6)
+            self.vertex_buffer.set_type('triangles')
 
-    def add_result(self, player, category, yahtzee_bonus):
-        self.record.append((player, category, yahtzee_bonus))
-        if len(self.record) % 2 == 0:
-            bar1 = Bar(*self.record[-2])
-            bar2 = Bar(*self.record[-1])
-            bar1.w *= -1
-            self.vertex_buffer.fill(x=bar1.x, y=bar1.y, w=bar1.w, h=bar1.h, color=bar1.color)
-            self.vertex_buffer.fill(x=bar2.x, y=bar2.y, w=bar2.w, h=bar2.h, color=bar2.color)
-            self.vertex_buffer.draw()
-            media.display()
+        def add_result(self, player, category, yahtzee_bonus):
+            self.record.append((player, category, yahtzee_bonus))
+            if len(self.record) % 2 == 0:
+                bar1 = Bar(*self.record[-2])
+                bar2 = Bar(*self.record[-1])
+                bar1.w *= -1
+                self.vertex_buffer.fill(x=bar1.x, y=bar1.y, w=bar1.w, h=bar1.h, color=bar1.color)
+                self.vertex_buffer.fill(x=bar2.x, y=bar2.y, w=bar2.w, h=bar2.h, color=bar2.color)
+                self.vertex_buffer.draw()
+                media.display()
 
-game_plot = GamePlot()
+    game_plot = GamePlot()
 
 class Player:
     def __init__(self, port):
@@ -106,9 +110,10 @@ class Player:
                 and self.categories.get('yahtzee').score_yahtzee())
             self.categories[decisions['category']] = copy.deepcopy(self.dice)
             if yahtzee_bonus: self.yahtzee_bonus += 100
-            game_plot.add_result(self, decisions['category'], yahtzee_bonus)
+            if media:
+                game_plot.add_result(self, decisions['category'], yahtzee_bonus)
             return True
-        else:
+        elif 'save_dice' in decisions:
             for die in self.dice: die.unsave()
             try:
                 assert len(decisions['save_dice']) <= 5
@@ -147,18 +152,19 @@ def play_game(players):
             opponent = players[(i_player + first + 1) % 2]
             player.take_turn(opponent)
 
-def poll_events():
-    while True:
-        event = media.poll_event()
-        if not event: break
-        if event == 'q':
-            media.close()
-            return True
+if media:
+    def poll_events():
+        while True:
+            event = media.poll_event()
+            if not event: break
+            if event == 'q':
+                media.close()
+                return True
 
 players = [Player(args.port_player_1), Player(args.port_player_2)]
 
 while game_number < GAMES:
-    poll_events()
+    if media: poll_events()
     play_game(players)
     if players[0].get_score() > players[1].get_score():
         players[0].points +=2
@@ -186,7 +192,7 @@ elif players[0].points < players[1].points:
 else:
     print('Tie!')
 
-while True:
+while media:
     if poll_events(): break
     time.sleep(0.01)
     game_plot.vertex_buffer.draw()

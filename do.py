@@ -14,6 +14,7 @@ import time
 parser = argparse.ArgumentParser()
 parser.add_argument('player_1_brain')
 parser.add_argument('player_2_brain')
+parser.add_argument('--debug', '-d', action='store_true')
 args = parser.parse_args()
 
 #===== consts =====#
@@ -75,12 +76,16 @@ p1 = invoke(
     'python3 player.py',
     env={'BRAIN': args.player_1_brain, 'PORT': '8000'},
     popen=True,
+    stdout=subprocess.PIPE if not args.debug else None,
+    stderr=subprocess.PIPE if not args.debug else None,
 )
 time.sleep(0.5)
 p2 = invoke(
     'python3 player.py',
     env={'BRAIN': args.player_2_brain, 'PORT': '8001'},
     popen=True,
+    stdout=subprocess.PIPE if not args.debug else None,
+    stderr=subprocess.PIPE if not args.debug else None,
 )
 time.sleep(0.5)
 try:
