@@ -15,6 +15,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('player_1_brain')
 parser.add_argument('player_2_brain')
 parser.add_argument('--debug', '-d', action='store_true')
+parser.add_argument('--python', default='python3')
 args = parser.parse_args()
 
 #===== consts =====#
@@ -73,7 +74,7 @@ def invoke(
 
 #===== main =====#
 p1 = invoke(
-    'python3 player.py',
+    f'{args.python} player.py',
     env={'BRAIN': args.player_1_brain, 'PORT': '8000'},
     popen=True,
     stdout=subprocess.PIPE if not args.debug else None,
@@ -81,7 +82,7 @@ p1 = invoke(
 )
 time.sleep(0.5)
 p2 = invoke(
-    'python3 player.py',
+    f'{args.python} player.py',
     env={'BRAIN': args.player_2_brain, 'PORT': '8001'},
     popen=True,
     stdout=subprocess.PIPE if not args.debug else None,
@@ -89,7 +90,7 @@ p2 = invoke(
 )
 time.sleep(0.5)
 try:
-    invoke('python3 arena.py')
+    invoke(f'{args.python} arena.py')
 finally:
     p1.kill()
     p2.kill()
