@@ -88,7 +88,7 @@ class Player:
         return res
 
     def start_new_game(self):
-        self.decisions = None
+        self.turn_record = None
         self.categories = {}
         self.yahtzee_bonus = 0
 
@@ -99,7 +99,10 @@ class Player:
             'opponent': opponent,
             'new_game': len(self.categories) == 0,
         })
-        self.decisions.append(decisions)
+        self.turn_record.append({
+            'dice': self.dice.values(),
+            'decisions': decisions,
+        })
         if 'category' in decisions:
             if decisions['category'] not in game.categories:
                 raise Exception(f'''Player {self.name} tried to score in invalid category {decisions['category']}!''')
@@ -124,7 +127,7 @@ class Player:
         if stage == 3: raise Exception(f'Player {self.name} did not declare a category!')
 
     def take_turn(self, opponent):
-        self.decisions = []
+        self.turn_record = []
         opponent_state = opponent.get_state()
         self.dice = game.Dice()
         for stage in range(1, 4):
@@ -134,7 +137,7 @@ class Player:
         return {
             'categories': {category: dice.values() for category, dice in self.categories.items()},
             'yahtzee_bonus': self.yahtzee_bonus,
-            'decisions': self.decisions,
+            'turn_record': self.turn_record,
         }
 
     def get_score(self):
