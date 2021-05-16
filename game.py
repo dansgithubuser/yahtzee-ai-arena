@@ -134,13 +134,16 @@ class Dice:
     def score_chance(self):
         return self.sum()
 
-categories = [
+categories_upper = [
     'aces',
     'twos',
     'threes',
     'fours',
     'fives',
     'sixes',
+]
+
+categories_lower = [
     'three_of_a_kind',
     'four_of_a_kind',
     'full_house',
@@ -149,6 +152,8 @@ categories = [
     'yahtzee',
     'chance',
 ]
+
+categories = categories_upper + categories_lower
 
 category_max_score = {
     'aces': 5,

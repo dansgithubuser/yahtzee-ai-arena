@@ -49,7 +49,7 @@ if media:
     class GamePlot:
         def __init__(self):
             self.record = []
-            self.vertex_buffer = media.VertexBuffer(GAMES * 2 * len(game.categories) * 6)
+            self.vertex_buffer = media.VertexBuffer(GAMES * 2 * (len(game.categories) + 1) * 6)
             self.vertex_buffer.set_type('triangles')
 
         def add_result(self, player, category, yahtzee_bonus):
@@ -60,8 +60,23 @@ if media:
                 bar1.w *= -1
                 self.vertex_buffer.fill(x=bar1.x, y=bar1.y, w=bar1.w, h=bar1.h, color=bar1.color)
                 self.vertex_buffer.fill(x=bar2.x, y=bar2.y, w=bar2.w, h=bar2.h, color=bar2.color)
+                media.clear(color=(0, 0, 0))
                 self.vertex_buffer.draw()
                 media.display()
+
+        def add_upper_bonus(self, player):
+            x_game = w_game * (game_number // isqrt_games)
+            y_game = h_game * (game_number % isqrt_games)
+            self.vertex_buffer.fill(
+                x=x_game + w_game // 2,
+                y=y_game,
+                w=w_game * 14 // 300 * (-1 if player.first else 1),
+                h=h_category * 6,
+                r=player.color[0],
+                g=player.color[1],
+                b=player.color[2],
+                a=128,
+            )
 
     game_plot = GamePlot()
 
@@ -141,14 +156,19 @@ class Player:
         }
 
     def get_score(self):
-        score = 0
-        for category, dice in self.categories.items():
-            score += dice.score(category)
-        return score
+        upper = sum(self.categories[category].score(category) for category in game.categories_upper)
+        if upper >= 63:
+            upper += 35
+            if media: game_plot.add_upper_bonus(self)
+        lower = sum(self.categories[category].score(category) for category in game.categories_lower)
+        return upper + lower + self.yahtzee_bonus
 
 def play_game(players):
-    for player in players: player.start_new_game()
+    for player in players:
+        player.start_new_game()
+        player.first = False
     first = random.randint(0, 1)
+    players[first].first = True
     for i_round in range(13):
         for i_player in range(2):
             player = players[(i_player + first) % 2]
@@ -169,15 +189,15 @@ players = [Player(args.port_player_1), Player(args.port_player_2)]
 while game_number < GAMES:
     if media: poll_events()
     play_game(players)
-    if players[0].get_score() > players[1].get_score():
+    p1_score = players[0].get_score()
+    p2_score = players[1].get_score()
+    if p1_score > p2_score:
         players[0].points +=2
-    elif players[0].get_score() < players[1].get_score():
+    elif p1_score < p2_score:
         players[1].points += 2
     else:
         players[0].points += 1
         players[1].points += 1
-    p1_score = players[0].get_score()
-    p2_score = players[1].get_score()
     p1_percent = round(100 * players[0].points / ((game_number + 1) * 2))
     p2_percent = 100 - p1_percent
     p1_stats = f'{p1_score:4}p {players[0].name} {p1_percent:3}%'
@@ -198,5 +218,6 @@ else:
 while media:
     if poll_events(): break
     time.sleep(0.01)
+    media.clear(color=(0, 0, 0))
     game_plot.vertex_buffer.draw()
     media.display()
