@@ -126,7 +126,9 @@ class Player:
             yahtzee_bonus = (self.dice.score_yahtzee()
                 and self.categories.get('yahtzee')
                 and self.categories.get('yahtzee').score_yahtzee())
-            self.categories[decisions['category']] = copy.deepcopy(self.dice)
+            dice = copy.deepcopy(self.dice)
+            dice.joker = yahtzee_bonus != 0
+            self.categories[decisions['category']] = dice
             if yahtzee_bonus: self.yahtzee_bonus += 100
             if media:
                 game_plot.add_result(self, decisions['category'], yahtzee_bonus)

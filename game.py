@@ -24,6 +24,7 @@ class Dice:
             self.dice = [Die(i) for i in values]
         else:
             self.dice = [Die() for i in range(5)]
+        self.joker = False
 
     def __str__(self):
         return ''.join([
@@ -111,20 +112,23 @@ class Dice:
                 return self.sum()
         return 0
 
-    def score_full_house(self):
-        if self.score_yahtzee(): return 25
+    def score_full_house(self, joker=None):
+        if joker == None: joker = self.joker
+        if joker and self.score_yahtzee(): return 25
         s = sorted(die.value for die in self.dice)
         if s[0] != s[1]: return 0
         if s[3] != s[4]: return 0
         if s[2] not in [s[1], s[3]]: return 0
         return 25
 
-    def score_small_straight(self):
-        if self.score_yahtzee() or len(self.straight()) >= 4: return 30
+    def score_small_straight(self, joker=None):
+        if joker == None: joker = self.joker
+        if joker and self.score_yahtzee() or len(self.straight()) >= 4: return 30
         return 0
 
-    def score_large_straight(self):
-        if self.score_yahtzee() or len(self.straight()) == 5: return 30
+    def score_large_straight(self, joker=None):
+        if joker == None: joker = self.joker
+        if joker and self.score_yahtzee() or len(self.straight()) == 5: return 40
         return 0
 
     def score_yahtzee(self):
